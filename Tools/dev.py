@@ -1,11 +1,7 @@
 import os
 import pandas as pd
-import re
-import matplotlib.pyplot as plt
-import matplotlib
-from sklearn.pipeline import make_pipeline
-matplotlib.use('TkAgg')  # Set the backend
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
@@ -13,16 +9,15 @@ from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import PolynomialFeatures
+import base64
+from io import BytesIO
+import tkinter as tk
+from tkinter import filedialog, ttk
 
+# Constants
 TRAIN_DATA_COLOR = 'blue'
 TEST_DATA_COLOR = 'red'
 REGRESSION_LINE_COLOR = 'green'
-
-def get_user_input():
-    """Prompts the user for the CSV file name and returns it."""
-    full_path = os.path.realpath(__file__)    
-    csv_file = (os.path.dirname(full_path) + "\\" + (input("Enter the name of the CSV file (Default: Data): ") or "Data") + ".csv").replace("\\", "\\\\")
-    return csv_file
 
 def load_data(csv_file):
     """Loads data from the CSV file and returns the features (X) and target (y)."""
@@ -34,24 +29,6 @@ def load_data(csv_file):
     except FileNotFoundError:
         print("Error: CSV file not found. Please try again.")
         exit(1)
-
-def simplify(equation):
-    # Extract coefficients and constant term
-    pattern = r"y = (-?\d*)\*x ([+-] \d+)?"
-    match = re.match(pattern, equation)
-
-    if match:
-        coefficient = int(match.group(1))
-        constant = int(match.group(2).replace(" ", "")) if match.group(2) else 0
-
-        # Simplify the equation
-        simplified_equation = f"y = {coefficient}*x"
-        if constant != 0:
-            simplified_equation += f" + {constant}"
-
-        print(simplified_equation)
-    else:
-        print("Equation format not recognized.")
 
 def generate_simplified_equation(model, feature_names=None, threshold=1e-4):
     """Generates a simplified human-readable equation string from the model's coefficients and intercept."""
@@ -70,7 +47,7 @@ def generate_simplified_equation(model, feature_names=None, threshold=1e-4):
         return equation
     return "Equation not available for this model."
 
-def run_regression_model(X, y, model_name, model_func, metric_func, visualize_data, feature_names=None):
+def run_regression_model(X, y, model_name, model_func, metric_func, feature_names=None):
     """
     Performs the specified regression model and returns the model, accuracy metric, and model name.
 
@@ -80,7 +57,6 @@ def run_regression_model(X, y, model_name, model_func, metric_func, visualize_da
         model_name: Name of the regression model (for informative output)
         model_func: Function that implements the regression model (e.g., LinearRegression)
         metric_func: Function to calculate the accuracy metric (e.g., r2_score, mean_squared_error)
-        visualize_data (Optional): Boolean flag indicating if data visualization is desired
         feature_names (Optional): List of feature names for the equation string.
 
     Returns:
@@ -88,6 +64,7 @@ def run_regression_model(X, y, model_name, model_func, metric_func, visualize_da
         accuracy: The accuracy metric value (R-squared for regression, other metrics for classification)
         model_name: The name of the model
         equation: The equation representing the model (if applicable)
+        plot_data: The plot image data as a base64 string
     """
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)  # Split data
 
@@ -96,37 +73,39 @@ def run_regression_model(X, y, model_name, model_func, metric_func, visualize_da
     y_pred = model.predict(X_test)
 
     accuracy = metric_func(y_test, y_pred)
-
     equation = generate_simplified_equation(model, feature_names)
 
-    if visualize_data:
-        plt.scatter(X_train.iloc[:, 0], y_train, color=TRAIN_DATA_COLOR, label='Train Data')
-        plt.scatter(X_test.iloc[:, 0], y_test, color=TEST_DATA_COLOR, label='Test Data')
-        plt.plot(X_test.iloc[:, 0], y_pred, color=REGRESSION_LINE_COLOR, label='Regression Line')
-        plt.xlabel('Feature')
-        plt.ylabel('Target Variable')
-        plt.title(f"{model_name} Visualization")
-        plt.legend()
-        plot_name = f"{model_name.replace(' ', '_')}_visualization.png"  # Unique name for the plot
-        plt.savefig(plot_name)  # Save plot as image
-        plt.show()  # Show the plot
+    # Create plot
+    plt.figure(figsize=(8, 6))
+    plt.scatter(X_train.iloc[:, 0], y_train, color=TRAIN_DATA_COLOR, label='Train Data')
+    plt.scatter(X_test.iloc[:, 0], y_test, color=TEST_DATA_COLOR, label='Test Data')
+    plt.plot(X_test.iloc[:, 0], y_pred, color=REGRESSION_LINE_COLOR, label='Regression Line')
+    plt.xlabel('Feature')
+    plt.ylabel('Target Variable')
+    plt.title(f"{model_name} Visualization")
+    plt.legend()
+    buf = BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+    plot_data = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close()
 
-    return model, accuracy, model_name, equation
+    return model, accuracy, model_name, equation, plot_data
 
-def run_simple_linear_regression(X, y, visualize_data, metric="r2"):
+def run_simple_linear_regression(X, y, metric="r2"):
     """Performs Simple Linear Regression using the run_regression_model function."""
     metric_func = r2_score if metric == "r2" else mean_squared_error
     feature_names = [X.columns[0]]
     X_feature = X.iloc[:, 0].values.reshape(-1, 1)
-    return run_regression_model(pd.DataFrame(X_feature, columns=feature_names), y, "Simple Linear Regression", LinearRegression, metric_func, visualize_data, feature_names)
+    return run_regression_model(pd.DataFrame(X_feature, columns=feature_names), y, "Simple Linear Regression", LinearRegression, metric_func, feature_names)
 
-def run_multiple_linear_regression(X, y, visualize_data, metric="r2"):
+def run_multiple_linear_regression(X, y, metric="r2"):
     """Performs Multiple Linear Regression using the run_regression_model function."""
     metric_func = r2_score if metric == "r2" else mean_squared_error
     feature_names = X.columns
-    return run_regression_model(X, y, "Multiple Linear Regression", LinearRegression, metric_func, visualize_data, feature_names)
+    return run_regression_model(X, y, "Multiple Linear Regression", LinearRegression, metric_func, feature_names)
 
-def run_polynomial_regression(X, y, visualize_data, degree, metric="r2"):
+def run_polynomial_regression(X, y, degree, metric="r2"):
     """Runs polynomial regression on the input data with the specified degree."""
     metric_func = r2_score if metric == "r2" else mean_squared_error
     polynomial_features = PolynomialFeatures(degree=degree)
@@ -134,133 +113,166 @@ def run_polynomial_regression(X, y, visualize_data, degree, metric="r2"):
     model = LinearRegression()
     model.fit(X_poly, y)
     y_pred = model.predict(X_poly)
-    
+
     feature_names = polynomial_features.get_feature_names_out(X.columns)
     equation = generate_simplified_equation(model, feature_names)
 
-    if visualize_data:
-        plt.scatter(X, y, color=TRAIN_DATA_COLOR, label='Data')
-        X_seq = np.linspace(X.min(), X.max(), 300).reshape(-1, 1)
-        plt.plot(X_seq, model.predict(polynomial_features.transform(X_seq)), color=REGRESSION_LINE_COLOR, label='Regression Line')
-        plt.xlabel('Feature')
-        plt.ylabel('Target Variable')
-        plt.title(f"Polynomial Regression (Degree: {degree}) Visualization")
-        plt.legend()
-        plot_name = f"Polynomial_Regression_Degree_{degree}_visualization.png"  # Unique name for the plot
-        plt.savefig(plot_name)  # Save plot as image
-        plt.show()  # Show the plot
+    # Create plot
+    plt.figure(figsize=(8, 6))
+    plt.scatter(X, y, color=TRAIN_DATA_COLOR, label='Data')
+    X_seq = np.linspace(X.min(), X.max(), 300).reshape(-1, 1)
+    plt.plot(X_seq, model.predict(polynomial_features.transform(X_seq)), color=REGRESSION_LINE_COLOR, label='Regression Line')
+    plt.xlabel('Feature')
+    plt.ylabel('Target Variable')
+    plt.title(f"Polynomial Regression (Degree: {degree}) Visualization")
+    plt.legend()
+    buf = BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+    plot_data = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close()
 
-    return model, metric_func(y, y_pred), f"Polynomial Regression (Degree: {degree})", equation
+    return model, metric_func(y, y_pred), f"Polynomial Regression (Degree: {degree})", equation, plot_data
 
-def run_ridge_regression(X, y, visualize_data, alpha, metric="r2"):
+def run_ridge_regression(X, y, alpha, metric="r2"):
     """Performs Ridge Regression with the specified alpha using the run_regression_model function."""
     metric_func = r2_score if metric == "r2" else mean_squared_error
-    return run_regression_model(X, y, f"Ridge Regression (Alpha: {alpha})", Ridge, metric_func, visualize_data)
+    return run_regression_model(X, y, f"Ridge Regression (Alpha: {alpha})", lambda: Ridge(alpha=alpha), metric_func)
 
-def run_lasso_regression(X, y, visualize_data, alpha, metric="r2"):
+def run_lasso_regression(X, y, alpha, metric="r2"):
     """Performs Lasso Regression with the specified alpha using the run_regression_model function."""
     metric_func = r2_score if metric == "r2" else mean_squared_error
-    return run_regression_model(X, y, f"Lasso Regression (Alpha: {alpha})", Lasso, metric_func, visualize_data)
+    return run_regression_model(X, y, f"Lasso Regression (Alpha: {alpha})", lambda: Lasso(alpha=alpha), metric_func)
 
-def run_svr(X, y, visualize_data, metric="r2"):
-    """Performs Support Vector Regression (SVR) using the run_regression_model function.
-
-    Args:
-        metric (str, optional): The accuracy metric to use (default: "r2").
-            Can be "r2" for R-squared or "mse" for mean squared error.
-    """
+def run_svr(X, y, metric="r2"):
+    """Performs Support Vector Regression (SVR) using the run_regression_model function."""
     metric_func = r2_score if metric == "r2" else mean_squared_error
-    return run_regression_model(X, y, "Support Vector Regression (SVR)", SVR, metric_func, visualize_data)
+    return run_regression_model(X, y, "Support Vector Regression (SVR)", SVR, metric_func)
 
-def run_decision_tree_regression(X, y, visualize_data, metric="r2"):
-    """Performs Decision Tree Regression using the run_regression_model function.
-
-    Args:
-        metric (str, optional): The accuracy metric to use (default: "r2").
-            Can be "r2" for R-squared or "mse" for mean squared error.
-    """
+def run_decision_tree_regression(X, y, metric="r2"):
+    """Performs Decision Tree Regression using the run_regression_model function."""
     metric_func = r2_score if metric == "r2" else mean_squared_error
-    return run_regression_model(X, y, "Decision Tree Regression", DecisionTreeRegressor, metric_func, visualize_data)
+    return run_regression_model(X, y, "Decision Tree Regression", DecisionTreeRegressor, metric_func)
 
-def run_random_forest_regression(X, y, visualize_data, metric="r2"):
-    """Performs Random Forest Regression using the run_regression_model function.
-
-    Args:
-        metric (str, optional): The accuracy metric to use (default: "r2").
-            Can be "r2" for R-squared or "mse" for mean squared error.
-    """
+def run_random_forest_regression(X, y, metric="r2"):
+    """Performs Random Forest Regression using the run_regression_model function."""
     metric_func = r2_score if metric == "r2" else mean_squared_error
-    return run_regression_model(X, y, "Random Forest Regression", RandomForestRegressor, metric_func, visualize_data)
+    return run_regression_model(X, y, "Random Forest Regression", RandomForestRegressor, metric_func)
 
 def main():
-    """
-    Main function that prompts the user, loads data, runs regression models,
-    and prints the results.
-    """
-    
-    condition = "greater_than"
-    
-    operators = {
-        "greater_than": ">",
-        "less_than": "<",
-        "equal_to": "=="
-    }
-    
-    csv_file = get_user_input()
-    X, y = load_data(csv_file)
+    def load_file():
+        file_path = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
+        if file_path:
+            entry_file_path.delete(0, tk.END)
+            entry_file_path.insert(0, file_path)
 
-    # Choose the desired metric (default to R-squared)
-    metric = input("Enter the desired accuracy metric (r2 or Default: mse): ")
-    metric = metric.lower()  # Convert to lowercase for case-insensitive input
-    
-    visualize = input("Do you want to visualize the data? (Yes or Default: No): " or "No").lower()
+    def run_models():
+        csv_file = entry_file_path.get()
+        X, y = load_data(csv_file)
 
-    visualize_data = visualize == "yes"
+        metric = combo_metric.get().lower()
+        visualize_data = chk_visualize_var.get()
 
-    # Run different regression models
-    models = [
-        run_simple_linear_regression(X, y, visualize_data, metric=metric),
-        run_multiple_linear_regression(X, y, visualize_data, metric=metric),
-        run_polynomial_regression(X.copy(), y, visualize_data, degree=2, metric=metric),  # Copy X to avoid modifying original data
-        # run_polynomial_regression(X.copy(), y, visualize_data, degree=3, metric=metric),
-        run_ridge_regression(X, y, visualize_data, alpha=1.0, metric=metric),
-        run_lasso_regression(X, y, visualize_data, alpha=0.1, metric=metric),
-        run_svr(X, y, visualize_data, metric=metric),
-        run_decision_tree_regression(X, y, visualize_data, metric=metric),
-        run_random_forest_regression(X, y, visualize_data, metric=metric),
-    ]
+        models = [
+            run_simple_linear_regression(X, y, metric=metric),
+            run_multiple_linear_regression(X, y, metric=metric),
+            run_polynomial_regression(X.copy(), y, degree=2, metric=metric),
+            run_ridge_regression(X, y, alpha=1.0, metric=metric),
+            run_lasso_regression(X, y, alpha=0.1, metric=metric),
+            run_svr(X, y, metric=metric),
+            run_decision_tree_regression(X, y, metric=metric),
+            run_random_forest_regression(X, y, metric=metric),
+        ]
 
-    # Find the model with the highest accuracy
-    best_model = None
-    best_accuracy = None
-    best_equation = None
-    best_model_name = None
-    
-    if (metric == "r2"):
-        condition = "greater_than"
-    elif (metric == "mse" or metric == ""):
-        condition = "less_than"
-    else:
-        raise ValueError("Invalid metric entered.")
+        best_model = None
+        best_accuracy = None
+        best_equation = None
+        best_model_name = None
 
-    for model, accuracy, model_name, equation in models:
-        if not equation:
-            equation = "Equation not available for this model."
+        condition = "greater_than" if metric == "r2" else "less_than"
+        operators = {"greater_than": ">", "less_than": "<", "equal_to": "=="}
+
+        for model, accuracy, model_name, equation, plot_data in models:
+            if not equation:
+                equation = "Equation not available for this model."
+            else:
+                equation = "Equation: " + equation
+            result = f"{model_name}: Accuracy = {accuracy:.4f}; {equation}"
+            label_result = tk.Label(frame_results, text=result)
+            label_result.pack()
+            
+            img = tk.PhotoImage(data=plot_data)
+            label_image = tk.Label(frame_results, image=img)
+            label_image.image = img  # Keep a reference to avoid garbage collection
+            label_image.pack()
+
+            if best_accuracy is None:
+                best_accuracy = accuracy
+            if eval(f"{accuracy} {operators[condition]} {best_accuracy}"):
+                best_model = model
+                best_accuracy = accuracy
+                best_equation = equation
+                best_model_name = model_name
+
+        if best_model:
+            label_best_model.config(text=f"Best Model: '{best_model_name}' with Accuracy = {best_accuracy:.4f} and {best_equation}")
         else:
-            equation = "Equation: " + equation
-        print(f"{model_name}: Accuracy = {accuracy:.4f}; {equation}")
-        
-        if best_accuracy == None: best_accuracy = accuracy        
-        if eval(str(accuracy) + str(operators[condition]) + str(best_accuracy)):
-            best_model = model
-            best_accuracy = accuracy
-            best_equation = equation
-            best_model_name = model_name
+            label_best_model.config(text="No models were run successfully.")
 
-    if best_model:
-        print(f"\nBest Model: '{best_model_name}' with Accuracy = {best_accuracy:.4f} and {best_equation}")
-    else:
-        print("\nNo models were run successfully.")
+    root = tk.Tk()
+    root.title("Regression Model Comparison")
+
+    # File selection frame
+    frame_file = tk.Frame(root)
+    frame_file.pack(pady=10)
+    tk.Label(frame_file, text="CSV File:").pack(side=tk.LEFT)
+    entry_file_path = tk.Entry(frame_file, width=50)
+    entry_file_path.pack(side=tk.LEFT, padx=5)
+    btn_browse = tk.Button(frame_file, text="Browse", command=load_file)
+    btn_browse.pack(side=tk.LEFT)
+
+    # Options frame
+    frame_options = tk.Frame(root)
+    frame_options.pack(pady=10)
+    tk.Label(frame_options, text="Accuracy Metric:").pack(side=tk.LEFT)
+    combo_metric = ttk.Combobox(frame_options, values=["r2", "mse"], state="readonly")
+    combo_metric.set("mse")
+    combo_metric.pack(side=tk.LEFT, padx=5)
+    chk_visualize_var = tk.BooleanVar()
+    chk_visualize = tk.Checkbutton(frame_options, text="Visualize Data", variable=chk_visualize_var)
+    chk_visualize.pack(side=tk.LEFT, padx=5)
+
+    # Run button
+    btn_run = tk.Button(root, text="Run Models", command=run_models)
+    btn_run.pack(pady=10)
+
+    # Results frame
+    frame_results = tk.Frame(root)
+    frame_results.pack(pady=10, fill=tk.BOTH, expand=True)
+
+    # Canvas and scrollbar
+    canvas = tk.Canvas(frame_results)
+    scrollbar = tk.Scrollbar(frame_results, orient="vertical", command=canvas.yview)
+    scrollable_frame = tk.Frame(canvas)
+
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(
+            scrollregion=canvas.bbox("all")
+        )
+    )
+
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    # Best model label
+    label_best_model = tk.Label(root, text="", fg="blue")
+    label_best_model.pack(pady=10)
+
+    root.mainloop()
 
 if __name__ == "__main__":
     main()
