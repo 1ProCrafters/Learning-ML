@@ -1,319 +1,255 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.svm import SVR
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import PolynomialFeatures
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk, Text
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from tkinter import ttk, filedialog
+from tkinter.scrolledtext import ScrolledText
+import os
+import pandas as pd
+import webbrowser
 
+# Global settings
 TRAIN_DATA_COLOR = 'blue'
 TEST_DATA_COLOR = 'red'
 REGRESSION_LINE_COLOR = 'green'
+VISUALIZATIONS_PER_ROW = 3
 
-class RegressionApp:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Regression Model Visualizer")
+def load_data(file_path):
+    data = pd.read_csv(file_path)
+    X = data.iloc[:, :-1]
+    y = data.iloc[:, -1]
+    return X, y, data
 
-        self.notebook = ttk.Notebook(master)
-        self.notebook.pack(expand=1, fill="both")
-        self.notebook.bind_all("<MouseWheel>", self._on_mousewheel)
+def run_simple_linear_regression(X, y, metric):
+    # Placeholder for running the model and generating results
+    return None, 0.9, "Simple Linear Regression", "y = ax + b", None
 
-        self.create_options_tab()
-        self.create_csv_viewer_tab()
-        self.create_regressions_tab()
+def run_multiple_linear_regression(X, y, metric):
+    # Placeholder for running the model and generating results
+    return None, 0.85, "Multiple Linear Regression", "y = ax1 + bx2 + c", None
 
-    def create_options_tab(self):
-        self.options_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.options_frame, text="Options")
+def run_polynomial_regression(X, y, degree, metric):
+    # Placeholder for running the model and generating results
+    return None, 0.92, "Polynomial Regression", "y = ax^2 + bx + c", None
 
-        self.label = ttk.Label(self.options_frame, text="Choose a CSV file")
-        self.label.pack(pady=10)
+def run_ridge_regression(X, y, alpha, metric):
+    # Placeholder for running the model and generating results
+    return None, 0.88, "Ridge Regression", "y = ax + b (Ridge)", None
 
-        self.filepath = tk.StringVar()
-        self.file_entry = ttk.Entry(self.options_frame, textvariable=self.filepath, width=50)
-        self.file_entry.pack(pady=5)
+def run_lasso_regression(X, y, alpha, metric):
+    # Placeholder for running the model and generating results
+    return None, 0.86, "Lasso Regression", "y = ax + b (Lasso)", None
 
-        self.browse_button = ttk.Button(self.options_frame, text="Browse", command=self.browse_file)
-        self.browse_button.pack(pady=5)
+def run_svr(X, y, metric):
+    # Placeholder for running the model and generating results
+    return None, 0.89, "Support Vector Regression", "SVR equation", None
 
-        self.load_button = ttk.Button(self.options_frame, text="Load CSV", command=self.load_csv)
-        self.load_button.pack(pady=5)
+def run_decision_tree_regression(X, y, metric):
+    # Placeholder for running the model and generating results
+    return None, 0.83, "Decision Tree Regression", "Decision Tree equation", None
 
-        self.run_button = ttk.Button(self.options_frame, text="Run Regressions", command=self.run_regressions)
-        self.run_button.pack(pady=20)
+def run_random_forest_regression(X, y, metric):
+    # Placeholder for running the model and generating results
+    return None, 0.91, "Random Forest Regression", "Random Forest equation", None
 
-        self.visualize = tk.BooleanVar()
-        self.visualize.set(True)
-        self.visualize_check = ttk.Checkbutton(self.options_frame, text="Visualize Data", variable=self.visualize)
-        self.visualize_check.pack()
+def main():
+    def load_file():
+        file_path = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
+        if file_path:
+            entry_file_path.delete(0, tk.END)
+            entry_file_path.insert(0, file_path)
+            with open(file_path, 'r') as file:
+                text_csv.delete('1.0', tk.END)
+                text_csv.insert(tk.END, file.read())
 
-        self.metric_label = ttk.Label(self.options_frame, text="Metric (r2 or mse)")
-        self.metric_label.pack(pady=5)
-
-        self.metric_entry = ttk.Entry(self.options_frame)
-        self.metric_entry.pack(pady=5)
-
-        self.advanced_details_button = ttk.Button(self.options_frame, text="Advanced Details", command=self.show_advanced_details)
-        self.advanced_details_button.pack(pady=10)
-
-    def create_csv_viewer_tab(self):
-        self.csv_viewer_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.csv_viewer_frame, text="CSV Viewer")
-
-        self.text_widget = Text(self.csv_viewer_frame, wrap="none")
-        self.text_widget.pack(expand=1, fill="both")
-
-        self.scrollbar_y = ttk.Scrollbar(self.csv_viewer_frame, orient="vertical", command=self.text_widget.yview)
-        self.scrollbar_y.pack(side="right", fill="y")
-        self.text_widget.config(yscrollcommand=self.scrollbar_y.set)
-
-        self.scrollbar_x = ttk.Scrollbar(self.csv_viewer_frame, orient="horizontal", command=self.text_widget.xview)
-        self.scrollbar_x.pack(side="bottom", fill="x")
-        self.text_widget.config(xscrollcommand=self.scrollbar_x.set)
-
-    def create_regressions_tab(self):
-        self.regressions_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.regressions_frame, text="Regressions")
-
-        self.canvas_frame = ttk.Frame(self.regressions_frame)
-        self.canvas_frame.pack(expand=True, fill="both")
-
-        self.regression_text_frame = ttk.LabelFrame(self.regressions_frame, text="Advanced Information")
-        self.regression_text_frame.pack(fill="x", padx=10, pady=10)
-
-        self.regression_text = Text(self.regression_text_frame, wrap="word", height=10)
-        self.regression_text.pack(expand=True, fill="both")
-
-        self.regression_scrollbar_y = ttk.Scrollbar(self.regression_text_frame, orient="vertical", command=self.regression_text.yview)
-        self.regression_scrollbar_y.pack(side="right", fill="y")
-        self.regression_text.config(yscrollcommand=self.regression_scrollbar_y.set)
-
-    def browse_file(self):
-        self.filepath.set(filedialog.askopenfilename())
-
-    def load_csv(self):
+    def save_csv():
         try:
-            with open(self.filepath.get(), "r") as file:
-                csv_content = file.read()
-            self.text_widget.delete(1.0, tk.END)
-            self.text_widget.insert(tk.END, csv_content)
-        except FileNotFoundError:
-            messagebox.showerror("Error", "CSV file not found. Please try again.")
+            file_path = entry_file_path.get()
+            content = text_csv.get('1.0', tk.END)
+            with open(file_path, 'w') as file:
+                file.write(content)
+            df = pd.read_csv(file_path)
+            df.to_csv(file_path, index=False)
+            label_status.config(text="CSV file saved successfully!", fg="green")
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+            label_status.config(text=f"Error saving CSV file: {e}", fg="red")
 
-    def show_advanced_details(self):
-        advanced_window = tk.Toplevel(self.master)
-        advanced_window.title("Advanced Details")
+    def run_models():
+        csv_file = entry_file_path.get()
+        X, y, data = load_data(csv_file)
 
-        advanced_text = Text(advanced_window, wrap="word")
-        advanced_text.pack(expand=True, fill="both")
-        advanced_text.insert("1.0", self.summary)
+        metric = combo_metric.get().lower()
 
-    def load_data(self, csv_file):
-        try:
-            data = pd.read_csv(csv_file)
-            X = data.drop('target', axis=1)
-            y = data['target']
-            return X, y
-        except FileNotFoundError:
-            messagebox.showerror("Error", "CSV file not found. Please try again.")
-            return None, None
-        except pd.errors.EmptyDataError:
-            messagebox.showerror("Error", "The selected CSV file is empty.")
-            return None, None
-        except pd.errors.ParserError:
-            messagebox.showerror("Error", "Error parsing CSV file. Please check the file format.")
-            return None, None
-        except KeyError:
-            messagebox.showerror("Error", "CSV file must contain a 'target' column.")
-            return None, None
-
-    def generate_simplified_equation(self, model, feature_names=None, threshold=1e-4):
-        if hasattr(model, 'coef_') and hasattr(model, 'intercept_'):
-            coef = model.coef_
-            intercept = model.intercept_
-            terms = []
-            if feature_names is None:
-                feature_names = [f"x{i}" for i in range(len(coef))]
-            for i, c in enumerate(coef):
-                if abs(c) > threshold:
-                    terms.append(f"{c:.4f}*{feature_names[i]}")
-            equation = " + ".join(terms)
-            if abs(intercept) > threshold:
-                equation = f"{intercept:.4f} + " + equation
-            return equation
-        return "Equation not available for this model."
-    
-    def _on_mousewheel(self, event):
-        self.notebook.yview_scroll(int(-1*(event.delta/120)), "units")
-
-    def run_regression_model(self, X, y, model_name, model_func, metric_func, visualize_data, feature_names=None):
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        model = model_func()
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-
-        accuracy = metric_func(y_test, y_pred)
-        equation = self.generate_simplified_equation(model, feature_names)
-
-        if visualize_data:
-            fig, ax = plt.subplots()
-            ax.scatter(X_train.iloc[:, 0], y_train, color=TRAIN_DATA_COLOR, label='Train Data')
-            ax.scatter(X_test.iloc[:, 0], y_test, color=TEST_DATA_COLOR, label='Test Data')
-            ax.plot(X_test.iloc[:, 0], y_pred, color=REGRESSION_LINE_COLOR, label='Regression Line')
-            ax.set_xlabel('Feature')
-            ax.set_ylabel('Target Variable')
-            ax.set_title(f"{model_name} Visualization")
-            ax.legend()
-
-            canvas = FigureCanvasTkAgg(fig, master=self.canvas_frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
-        return model, accuracy, model_name, equation
-
-    def run_simple_linear_regression(self, X, y, visualize_data, metric="r2"):
-        metric_func = r2_score if metric == "r2" else mean_squared_error
-        feature_names = [X.columns[0]]
-        X_feature = X.iloc[:, 0].values.reshape(-1, 1)
-        return self.run_regression_model(pd.DataFrame(X_feature, columns=feature_names), y, "Simple Linear Regression", LinearRegression, metric_func, visualize_data, feature_names)
-
-    def run_multiple_linear_regression(self, X, y, visualize_data, metric="r2"):
-        metric_func = r2_score if metric == "r2" else mean_squared_error
-        feature_names = X.columns
-        return self.run_regression_model(X, y, "Multiple Linear Regression", LinearRegression, metric_func, visualize_data, feature_names)
-
-    def run_polynomial_regression(self, X, y, visualize_data, degree, metric="r2"):
-        metric_func = r2_score if metric == "r2" else mean_squared_error
-        polynomial_features = PolynomialFeatures(degree=degree)
-        X_poly = polynomial_features.fit_transform(X)
-        model = LinearRegression()
-        model.fit(X_poly, y)
-        y_pred = model.predict(X_poly)
-
-        if visualize_data:
-            fig, ax = plt.subplots()
-            ax.scatter(X.iloc[:, 0], y, color=TRAIN_DATA_COLOR, label='Data')
-            ax.plot(X.iloc[:, 0], y_pred, color=REGRESSION_LINE_COLOR, label=f'Polynomial Regression Line (Degree: {degree})')
-            ax.set_xlabel('Feature')
-            ax.set_ylabel('Target Variable')
-            ax.set_title(f"Polynomial Regression (Degree: {degree}) Visualization")
-            ax.legend()
-
-            canvas = FigureCanvasTkAgg(fig, master=self.canvas_frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
-        accuracy = metric_func(y, y_pred)
-        model_name = f"Polynomial Regression (Degree: {degree})"
-        feature_names = [f"x^{i}" for i in range(degree + 1)]
-        equation = self.generate_simplified_equation(model, feature_names)
-        return model, accuracy, model_name, equation
-
-    def run_ridge_regression(self, X, y, visualize_data, alpha=1.0, metric="r2"):
-        metric_func = r2_score if metric == "r2" else mean_squared_error
-        feature_names = X.columns
-        return self.run_regression_model(X, y, "Ridge Regression", lambda: Ridge(alpha=alpha), metric_func, visualize_data, feature_names)
-
-    def run_lasso_regression(self, X, y, visualize_data, alpha=0.1, metric="r2"):
-        metric_func = r2_score if metric == "r2" else mean_squared_error
-        feature_names = X.columns
-        model, accuracy, model_name, equation = self.run_regression_model(X, y, "Lasso Regression", lambda: Lasso(alpha=alpha), metric_func, visualize_data, feature_names)
-
-        if visualize_data:
-            fig, ax = plt.subplots()
-            ax.scatter(X.iloc[:, 0], y, color=TRAIN_DATA_COLOR, label='Data')
-            ax.plot(X.iloc[:, 0], model.predict(X), color=REGRESSION_LINE_COLOR, label='Regression Line')
-            ax.set_xlabel('Feature')
-            ax.set_ylabel('Target Variable')
-            ax.set_title(f"Lasso Regression (Alpha: {alpha}) Visualization")
-            ax.legend()
-
-            canvas = FigureCanvasTkAgg(fig, master=self.canvas_frame)
-            canvas.draw()
-            canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
-        return model, accuracy, model_name, equation
-
-    def run_svr(self, X, y, visualize_data, metric="r2"):
-        metric_func = r2_score if metric == "r2" else mean_squared_error
-        return self.run_regression_model(X, y, "Support Vector Regression (SVR)", SVR, metric_func, visualize_data)
-
-    def run_decision_tree_regression(self, X, y, visualize_data, metric="r2"):
-        metric_func = r2_score if metric == "r2" else mean_squared_error
-        return self.run_regression_model(X, y, "Decision Tree Regression", DecisionTreeRegressor, metric_func, visualize_data)
-
-    def run_random_forest_regression(self, X, y, visualize_data, metric="r2"):
-        metric_func = r2_score if metric == "r2" else mean_squared_error
-        return self.run_regression_model(X, y, "Random Forest Regression", RandomForestRegressor, metric_func, visualize_data)
-
-    def run_regressions(self):
-        csv_file = self.filepath.get()
-        X, y = self.load_data(csv_file)
-
-        if X is None or y is None:
-            return
-
-        metric = self.metric_entry.get().strip().lower() or "mse"
-        visualize_data = self.visualize.get()
+        global TRAIN_DATA_COLOR, TEST_DATA_COLOR, REGRESSION_LINE_COLOR, VISUALIZATIONS_PER_ROW
+        TRAIN_DATA_COLOR = entry_train_color.get()
+        TEST_DATA_COLOR = entry_test_color.get()
+        REGRESSION_LINE_COLOR = entry_regression_color.get()
+        VISUALIZATIONS_PER_ROW = int(spinbox_visualizations_per_row.get())
 
         models = [
-            self.run_simple_linear_regression(X, y, visualize_data, metric=metric),
-            self.run_multiple_linear_regression(X, y, visualize_data, metric=metric),
-            self.run_polynomial_regression(X.copy(), y, visualize_data, degree=2, metric=metric),
-            self.run_ridge_regression(X, y, visualize_data, alpha=1.0, metric=metric),
-            self.run_lasso_regression(X, y, visualize_data, alpha=0.1, metric=metric),
-            self.run_svr(X, y, visualize_data, metric=metric),
-            self.run_decision_tree_regression(X, y, visualize_data, metric=metric),
-            self.run_random_forest_regression(X, y, visualize_data, metric=metric),
+            run_simple_linear_regression(X, y, metric=metric),
+            run_multiple_linear_regression(X, y, metric=metric),
+            run_polynomial_regression(X.copy(), y, 2, metric=metric),
+            run_ridge_regression(X, y, alpha=1.0, metric=metric),
+            run_lasso_regression(X, y, alpha=0.1, metric=metric),
+            run_svr(X, y, metric=metric),
+            run_decision_tree_regression(X, y, metric=metric),
+            run_random_forest_regression(X, y, metric=metric),
         ]
 
         best_model = None
         best_accuracy = None
         best_equation = None
         best_model_name = None
-        
-        condition = "greater_than" if metric == "r2" else "less_than"
-        operators = {
-            "greater_than": ">",
-            "less_than": "<",
-            "equal_to": "=="
-        }
 
-        self.summary = ""
-        for model, accuracy, model_name, equation in models:
+        condition = "greater_than" if metric == "r2" else "less_than"
+        operators = {"greater_than": ">", "less_than": "<", "equal_to": "=="}
+
+        for model, accuracy, model_name, equation, plot_data in models:
             if not equation:
                 equation = "Equation not available for this model."
             else:
                 equation = "Equation: " + equation
-            self.summary += f"{model_name}: Accuracy = {accuracy:.4f}; {equation}\n"
-            
+
+            result = f"{model_name}: Accuracy = {accuracy:.4f}; {equation}"
+            label_result = tk.Label(scrollable_frame_summary, text=result)
+            label_result.pack()
+
+            img = tk.PhotoImage(data=plot_data)
+            label_image = tk.Label(frame_visualizations, image=img)
+            label_image.image = img  # Keep a reference to avoid garbage collection
+            label_image.pack()
+
             if best_accuracy is None:
                 best_accuracy = accuracy
-            if eval(str(accuracy) + str(operators[condition]) + str(best_accuracy)):
+            if eval(f"{accuracy} {operators[condition]} {best_accuracy}"):
                 best_model = model
                 best_accuracy = accuracy
                 best_equation = equation
                 best_model_name = model_name
 
         if best_model:
-            self.summary += f"\nBest Model: '{best_model_name}' with Accuracy = {best_accuracy:.4f} and {best_equation}"
+            label_best_model.config(text=f"Best Model: '{best_model_name}' with Accuracy = {best_accuracy:.4f} and {best_equation}")
         else:
-            self.summary += "\nNo models were run successfully."
+            label_best_model.config(text="No models were run successfully.")
 
-        self.regression_text.delete(1.0, tk.END)
-        self.regression_text.insert(tk.END, self.summary)
+        # Add heading for visualizations
+        heading_visualizations = f"Visualizations for {csv_file} with {metric}"
+        label_heading_visualizations = tk.Label(scrollable_frame_visualizations, text=heading_visualizations, fg="blue", font=("Helvetica", 16, "bold"))
+        label_heading_visualizations.pack(side=tk.TOP, pady=10)
+
+        # Arrange visualizations in a grid
+        for i, child in enumerate(frame_visualizations.winfo_children()):
+            child.grid(row=i // VISUALIZATIONS_PER_ROW, column=i % VISUALIZATIONS_PER_ROW, padx=5, pady=5)
+
+    root = tk.Tk()
+    root.title("Regression Model Comparison")
+
+    notebook = ttk.Notebook(root)
+    notebook.pack(pady=10, expand=True, fill=tk.BOTH)
+
+    def add_scrollbars_to_tab(tab):
+        canvas = tk.Canvas(tab)
+        scrollbar_x = ttk.Scrollbar(tab, orient="horizontal", command=canvas.xview)
+        scrollbar_y = ttk.Scrollbar(tab, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(xscrollcommand=scrollbar_x.set, yscrollcommand=scrollbar_y.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar_x.pack(side="bottom", fill="x")
+        scrollbar_y.pack(side="right", fill="y")
+
+        return scrollable_frame
+
+    # Tab 1: File selection and options
+    tab_file = ttk.Frame(notebook)
+    notebook.add(tab_file, text="File Selection and Options")
+    scrollable_frame_file = add_scrollbars_to_tab(tab_file)
+
+    frame_file = tk.Frame(scrollable_frame_file)
+    frame_file.pack(pady=10)
+    tk.Label(frame_file, text="CSV File:").pack(side=tk.LEFT)
+    entry_file_path = tk.Entry(frame_file, width=50)
+    entry_file_path.pack(side=tk.LEFT, padx=5)
+    btn_browse = tk.Button(frame_file, text="Browse", command=load_file)
+    btn_browse.pack(side=tk.LEFT)
+
+    frame_options = tk.Frame(scrollable_frame_file)
+    frame_options.pack(pady=10)
+    tk.Label(frame_options, text="Accuracy Metric:").pack(side=tk.LEFT)
+    combo_metric = ttk.Combobox(frame_options, values=["r2", "mse"], state="readonly")
+    combo_metric.set("mse")
+    combo_metric.pack(side=tk.LEFT, padx=5)
+
+    # Additional options for visualization settings
+    frame_visual_options = tk.Frame(scrollable_frame_file)
+    frame_visual_options.pack(pady=10)
+    
+    tk.Label(frame_visual_options, text="Train Data Color:").grid(row=0, column=0, padx=5, pady=5)
+    entry_train_color = tk.Entry(frame_visual_options)
+    entry_train_color.insert(0, TRAIN_DATA_COLOR)
+    entry_train_color.grid(row=0, column=1, padx=5, pady=5)
+
+    tk.Label(frame_visual_options, text="Test Data Color:").grid(row=1, column=0, padx=5, pady=5)
+    entry_test_color = tk.Entry(frame_visual_options)
+    entry_test_color.insert(0, TEST_DATA_COLOR)
+    entry_test_color.grid(row=1, column=1, padx=5, pady=5)
+
+    tk.Label(frame_visual_options, text="Regression Line Color:").grid(row=2, column=0, padx=5, pady=5)
+    entry_regression_color = tk.Entry(frame_visual_options)
+    entry_regression_color.insert(0, REGRESSION_LINE_COLOR)
+    entry_regression_color.grid(row=2, column=1, padx=5, pady=5)
+
+    tk.Label(frame_visual_options, text="Visualizations per Row:").grid(row=3, column=0, padx=5, pady=5)
+    spinbox_visualizations_per_row = tk.Spinbox(frame_visual_options, from_=1, to=10, width=5)
+    spinbox_visualizations_per_row.delete(0, tk.END)
+    spinbox_visualizations_per_row.insert(0, VISUALIZATIONS_PER_ROW)
+    spinbox_visualizations_per_row.grid(row=3, column=1, padx=5, pady=5)
+
+    # Tab 2: Edit CSV
+    tab_edit_csv = ttk.Frame(notebook)
+    notebook.add(tab_edit_csv, text="Edit CSV")
+    scrollable_frame_edit_csv = add_scrollbars_to_tab(tab_edit_csv)
+
+    frame_edit_csv = tk.Frame(scrollable_frame_edit_csv)
+    frame_edit_csv.pack(pady=10)
+    text_csv = ScrolledText(frame_edit_csv, width=80, height=20)
+    text_csv.pack(padx=10, pady=10)
+
+    frame_save = tk.Frame(scrollable_frame_edit_csv)
+    frame_save.pack(pady=10)
+    btn_save = tk.Button(frame_save, text="Save CSV", command=save_csv)
+    btn_save.pack(side=tk.LEFT, padx=5)
+    label_status = tk.Label(frame_save, text="", fg="red")
+    label_status.pack(side=tk.LEFT, padx=5)
+
+    # Tab 3: Summary
+    tab_summary = ttk.Frame(notebook)
+    notebook.add(tab_summary, text="Summary")
+    scrollable_frame_summary = add_scrollbars_to_tab(tab_summary)
+
+    # Tab 4: Visualizations
+    tab_visualizations = ttk.Frame(notebook)
+    notebook.add(tab_visualizations, text="Visualizations")
+    scrollable_frame_visualizations = add_scrollbars_to_tab(tab_visualizations)
+    frame_visualizations = tk.Frame(scrollable_frame_visualizations)
+    frame_visualizations.pack(pady=10)
+
+    # Run Models Button
+    frame_run_models = tk.Frame(scrollable_frame_file)
+    frame_run_models.pack(pady=10)
+    btn_run_models = tk.Button(frame_run_models, text="Run Models", command=run_models)
+    btn_run_models.pack(side=tk.LEFT, padx=5)
+    label_best_model = tk.Label(frame_run_models, text="", fg="green")
+    label_best_model.pack(side=tk.LEFT, padx=5)
+
+    root.mainloop()
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = RegressionApp(root)
-    root.mainloop()
+    main()
