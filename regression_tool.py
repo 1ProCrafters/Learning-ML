@@ -6,15 +6,10 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.svm import SVR
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.tree import DecisionTreeRegressor, plot_tree
 from sklearn.ensemble import RandomForestRegressor
 import seaborn as sns
 import matplotlib.pyplot as plt
-from dtreeviz import dtreeviz
-import logging
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
 
 def main():
     st.title("Regression Analysis Tool")
@@ -22,10 +17,15 @@ def main():
 
     if st.button("Return to Main Page"):
         st.session_state.page = "main"
+        st.experimental_rerun()
 
     uploaded_file = st.sidebar.file_uploader("Choose a CSV file", type="csv")
 
     if uploaded_file is not None:
+        if st.sidebar.button("Generate Comparative Report"):
+            st.session_state.page = "make_report"
+            st.experimental_rerun()
+            
         df = pd.read_csv(uploaded_file)
         st.write("Dataset Preview:")
         st.write(df.head())
@@ -75,6 +75,9 @@ def main():
                 return float('nan')  # Adjusted R² is undefined
             return 1 - (((1 - r2) * (n - 1)) / (n - k - 1))
 
+        # Store results for the report
+        regression_results = {}
+
         algo = st.sidebar.selectbox("Select Regression Algorithm:", 
                             ['Linear Regression', 
                              'Polynomial Regression', 
@@ -122,21 +125,30 @@ def main():
             sns.residplot(x=y_test, y=y_predictions, robust=True, color='blue', ax=ax)
             e.pyplot(fig=fig, clear_figure=None)
 
+            if st.button("Save to Report", key="save_lr"):
+                regression_results['Linear Regression'] = {
+                    'R2 Score': r2_scoree,
+                    'Adjusted R2 Score': adjusted_r2_score,
+                    'Root Mean Squared Error': np.sqrt(mean_squared_error_),
+                    'Regression Plot': fig,
+                    'Residual Plot': fig
+                }
+
         if algo == 'Polynomial Regression':
             st.write(f"<h2><b><font>Polynomial Regression</b></h2>", unsafe_allow_html=True)
-            degree = st.sidebar.slider("Degree of polynomial", 1, 5, key="degree")
+            degree = st.sidebar.slider("Degree of the polynomial features:", 2, 5, 2, key="degree_pr")
             test_size = st.sidebar.slider("Test size", 0.1, 0.5, 0.2, 0.01, key="test_size_pr")
 
             x_train, x_test, y_train, y_test = split(df_processed, test_size, dependent_column)
             show_split(x_train, x_test, test_size)
 
-            poly = PolynomialFeatures(degree=degree)
-            x_poly_train = poly.fit_transform(x_train[independent_columns])
-            x_poly_test = poly.transform(x_test[independent_columns])
+            poly_features = PolynomialFeatures(degree=degree)
+            x_train_poly = poly_features.fit_transform(x_train[independent_columns])
+            x_test_poly = poly_features.fit_transform(x_test[independent_columns])
 
-            lr = LinearRegression()
-            lr.fit(x_poly_train, y_train)
-            y_predictions = lr.predict(x_poly_test)
+            pr = LinearRegression()
+            pr.fit(x_train_poly, y_train)
+            y_predictions = pr.predict(x_test_poly)
 
             st.header("Polynomial Regression Results: ")
 
@@ -144,20 +156,13 @@ def main():
 
             with c1:
                 r2_scoree = r2_score(y_test, y_predictions)
-                st.write(f"<b>R2 score is: <br><mark> {r2_scoree:.6f} </mark></b>", unsafe_allow_html=True)
+                st.write(f"<b>R2 score is: <mark> {r2_scoree:.6f} </mark></b>", unsafe_allow_html=True)
             with c2:
                 adjusted_r2_score = adjusted_r2(r2_scoree, len(x_test), len(independent_columns))
                 st.write(f"<b>Adjusted R2 score is: <mark> {adjusted_r2_score:.6f} </mark></b>", unsafe_allow_html=True)
             with c3:
                 mean_squared_error_ = mean_squared_error(y_test, y_predictions)
                 st.write(f"<b>Root mean squared error is: <mark> {np.sqrt(mean_squared_error_):.6f} </mark></b>", unsafe_allow_html=True)
-
-            st.subheader("Feature Importance: ")
-            e = st.expander("")
-            coef1 = pd.Series(lr.coef_, poly.get_feature_names_out(independent_columns)).sort_values()
-            fig, ax = plt.subplots()
-            coef1.plot(kind='bar', title='Model Coefficients', color='blue')
-            e.pyplot(fig=fig, clear_figure=None)
 
             st.subheader("Regression Plot")
             e = st.expander("")
@@ -172,29 +177,38 @@ def main():
             sns.residplot(x=y_test, y=y_predictions, robust=True, color='blue', ax=ax)
             e.pyplot(fig=fig, clear_figure=None)
 
+            if st.button("Save to Report", key="save_pr"):
+                regression_results['Polynomial Regression'] = {
+                    'R2 Score': r2_scoree,
+                    'Adjusted R2 Score': adjusted_r2_score,
+                    'Root Mean Squared Error': np.sqrt(mean_squared_error_),
+                    'Regression Plot': fig,
+                    'Residual Plot': fig
+                }
+
         if algo == 'Support Vector Regression (SVR)':
             st.write(f"<h2><b><font>Support Vector Regression (SVR)</b></h2>", unsafe_allow_html=True)
+            kernel = st.sidebar.selectbox("Select SVR kernel:", ['linear', 'poly', 'rbf', 'sigmoid'], key="kernel_svr")
             test_size = st.sidebar.slider("Test size", 0.1, 0.5, 0.2, 0.01, key="test_size_svr")
-            kernel = st.sidebar.selectbox("Kernel", ['linear', 'poly', 'rbf', 'sigmoid'], key="kernel")
 
             x_train, x_test, y_train, y_test = split(df_processed, test_size, dependent_column)
             show_split(x_train, x_test, test_size)
 
-            sc = StandardScaler()
-            x_train = sc.fit_transform(x_train[independent_columns])
-            x_test = sc.transform(x_test[independent_columns])
+            scaler = StandardScaler()
+            x_train_scaled = scaler.fit_transform(x_train[independent_columns])
+            x_test_scaled = scaler.transform(x_test[independent_columns])
 
             svr = SVR(kernel=kernel)
-            svr.fit(x_train, y_train)
-            y_predictions = svr.predict(x_test)
+            svr.fit(x_train_scaled, y_train)
+            y_predictions = svr.predict(x_test_scaled)
 
-            st.header("Support Vector Regression Results: ")
+            st.header("SVR Results: ")
 
             c1, c2, c3 = st.columns(3)
 
             with c1:
                 r2_scoree = r2_score(y_test, y_predictions)
-                st.write(f"<b>R2 score is: <br><mark> {r2_scoree:.6f} </mark></b>", unsafe_allow_html=True)
+                st.write(f"<b>R2 score is: <mark> {r2_scoree:.6f} </mark></b>", unsafe_allow_html=True)
             with c2:
                 adjusted_r2_score = adjusted_r2(r2_scoree, len(x_test), len(independent_columns))
                 st.write(f"<b>Adjusted R2 score is: <mark> {adjusted_r2_score:.6f} </mark></b>", unsafe_allow_html=True)
@@ -214,6 +228,15 @@ def main():
             fig, ax = plt.subplots()
             sns.residplot(x=y_test, y=y_predictions, robust=True, color='blue', ax=ax)
             e.pyplot(fig=fig, clear_figure=None)
+
+            if st.button("Save to Report", key="save_svr"):
+                regression_results['Support Vector Regression'] = {
+                    'R2 Score': r2_scoree,
+                    'Adjusted R2 Score': adjusted_r2_score,
+                    'Root Mean Squared Error': np.sqrt(mean_squared_error_),
+                    'Regression Plot': fig,
+                    'Residual Plot': fig
+                }
 
         if algo == 'Decision Tree Regression':
             st.write(f"<h2><b><font>Decision Tree Regression</b></h2>", unsafe_allow_html=True)
@@ -222,9 +245,9 @@ def main():
             x_train, x_test, y_train, y_test = split(df_processed, test_size, dependent_column)
             show_split(x_train, x_test, test_size)
 
-            regressor = DecisionTreeRegressor(random_state=42)
-            regressor.fit(x_train[independent_columns], y_train)
-            y_predictions = regressor.predict(x_test[independent_columns])
+            dtr = DecisionTreeRegressor(random_state=42)
+            dtr.fit(x_train[independent_columns], y_train)
+            y_predictions = dtr.predict(x_test[independent_columns])
 
             st.header("Decision Tree Regression Results: ")
 
@@ -232,7 +255,7 @@ def main():
 
             with c1:
                 r2_scoree = r2_score(y_test, y_predictions)
-                st.write(f"<b>R2 score is: <br><mark> {r2_scoree:.6f} </mark></b>", unsafe_allow_html=True)
+                st.write(f"<b>R2 score is: <mark> {r2_scoree:.6f} </mark></b>", unsafe_allow_html=True)
             with c2:
                 adjusted_r2_score = adjusted_r2(r2_scoree, len(x_test), len(independent_columns))
                 st.write(f"<b>Adjusted R2 score is: <mark> {adjusted_r2_score:.6f} </mark></b>", unsafe_allow_html=True)
@@ -240,24 +263,30 @@ def main():
                 mean_squared_error_ = mean_squared_error(y_test, y_predictions)
                 st.write(f"<b>Root mean squared error is: <mark> {np.sqrt(mean_squared_error_):.6f} </mark></b>", unsafe_allow_html=True)
 
-            st.subheader("Feature Importance: ")
-            e = st.expander("")
-            coef1 = pd.Series(regressor.feature_importances_, index=independent_columns).sort_values()
-            fig, ax = plt.subplots()
-            coef1.plot(kind='bar', title='Feature Importance', color='blue')
-            e.pyplot(fig=fig, clear_figure=None)
+            st.subheader("Decision Tree Plot")
+            fig, ax = plt.subplots(figsize=(10, 10))
+            plot_tree(dtr, feature_names=independent_columns, filled=True, ax=ax)
+            st.pyplot(fig)
+
+            if st.button("Save to Report", key="save_dtr"):
+                regression_results['Decision Tree Regression'] = {
+                    'R2 Score': r2_scoree,
+                    'Adjusted R2 Score': adjusted_r2_score,
+                    'Root Mean Squared Error': np.sqrt(mean_squared_error_),
+                    'Decision Tree Plot': fig
+                }
 
         if algo == 'Random Forest Regression':
             st.write(f"<h2><b><font>Random Forest Regression</b></h2>", unsafe_allow_html=True)
-            n_estimators = st.sidebar.slider("Number of estimators", 1, 100, 10, key="n_estimators")
+            n_estimators = st.sidebar.slider("Number of trees in the forest:", 10, 100, 10, key="n_estimators_rfr")
             test_size = st.sidebar.slider("Test size", 0.1, 0.5, 0.2, 0.01, key="test_size_rfr")
 
             x_train, x_test, y_train, y_test = split(df_processed, test_size, dependent_column)
             show_split(x_train, x_test, test_size)
 
-            regressor = RandomForestRegressor(n_estimators=n_estimators, random_state=42)
-            regressor.fit(x_train[independent_columns], y_train)
-            y_predictions = regressor.predict(x_test[independent_columns])
+            rfr = RandomForestRegressor(n_estimators=n_estimators, random_state=42)
+            rfr.fit(x_train[independent_columns], y_train)
+            y_predictions = rfr.predict(x_test[independent_columns])
 
             st.header("Random Forest Regression Results: ")
 
@@ -265,7 +294,7 @@ def main():
 
             with c1:
                 r2_scoree = r2_score(y_test, y_predictions)
-                st.write(f"<b>R2 score is: <br><mark> {r2_scoree:.6f} </mark></b>", unsafe_allow_html=True)
+                st.write(f"<b>R2 score is: <mark> {r2_scoree:.6f} </mark></b>", unsafe_allow_html=True)
             with c2:
                 adjusted_r2_score = adjusted_r2(r2_scoree, len(x_test), len(independent_columns))
                 st.write(f"<b>Adjusted R2 score is: <mark> {adjusted_r2_score:.6f} </mark></b>", unsafe_allow_html=True)
@@ -273,29 +302,30 @@ def main():
                 mean_squared_error_ = mean_squared_error(y_test, y_predictions)
                 st.write(f"<b>Root mean squared error is: <mark> {np.sqrt(mean_squared_error_):.6f} </mark></b>", unsafe_allow_html=True)
 
-            st.subheader("Feature Importance: ")
+            st.subheader("Regression Plot")
             e = st.expander("")
-            coef1 = pd.Series(regressor.feature_importances_, independent_columns).sort_values()
+            x_bins = e.number_input("x_bins", 10, 100, 10)
             fig, ax = plt.subplots()
-            coef1.plot(kind='bar', title='Feature Importance', color='blue')
+            sns.regplot(x=y_test, y=y_predictions, robust=True, color='blue', x_bins=x_bins, ax=ax)
             e.pyplot(fig=fig, clear_figure=None)
 
-            st.subheader("Tree Visualization")
-            e = st.expander("")
-            try:
-                # Visualizing the first tree of the random forest
-                viz = dtreeviz(
-                    regressor.estimators_[0],
-                    x_train[independent_columns],
-                    y_train,
-                    target_name=dependent_column,
-                    feature_names=independent_columns,
-                    title="Decision Tree Visualization"
-                )
-                e.pyplot(fig=viz.view())
-            except Exception as ex:
-                st.error(f"Failed to create tree visualization: {ex}")
-                logging.exception("Tree visualization error:")
+            st.subheader("Residual Plot")
+            e = st.expander("")     
+            fig, ax = plt.subplots()
+            sns.residplot(x=y_test, y=y_predictions, robust=True, color='blue', ax=ax)
+            e.pyplot(fig=fig, clear_figure=None)
+
+            if st.button("Save to Report", key="save_rfr"):
+                regression_results['Random Forest Regression'] = {
+                    'R2 Score': r2_scoree,
+                    'Adjusted R2 Score': adjusted_r2_score,
+                    'Root Mean Squared Error': np.sqrt(mean_squared_error_),
+                    'Regression Plot': fig,
+                    'Residual Plot': fig
+                }
+
+        # Save the regression results to session state
+        st.session_state['regression_results'] = regression_results
 
 if __name__ == "__main__":
     main()

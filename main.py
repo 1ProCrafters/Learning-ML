@@ -1,8 +1,11 @@
+# main.py
 import streamlit as st
 from regression_tool import main as regression_tool
 from data_preprocessing import main as data_preprocessing
+from make_report import make_report
 
 def main():
+    # Initialize session state if not already initialized
     if "page" not in st.session_state:
         st.session_state.page = "main"
 
@@ -12,6 +15,8 @@ def main():
         regression_tool()
     elif st.session_state.page == "data_preprocessing":
         data_preprocessing()
+    elif st.session_state.page == 'make_report':
+        make_report()
 
 def main_page():
     st.title("Main Page")

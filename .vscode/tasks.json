@@ -5,7 +5,16 @@
 			"label": "streamlit",
 			"type": "shell",
 			"command": "streamlit run '.\\main.py'",
-			"problemMatcher": []
+		},
+		{
+			"label": "data cleaner",
+			"type": "shell",
+			"command": "streamlit run '.\\data_cleaner.py'",
+		},
+		{
+			"label": "pip reqs",
+			"type": "shell",
+			"command": "pip install streamlit pandas numpy scikit-learn matplotlib seaborn fpdf",
 		}
 	]
 }
