@@ -1,0 +1,13 @@
+__pycache__/
+.DS_store
+.mypy_cache/
+.ruff_cache/
+.__pycache__/
+.streamlit/secrets.toml
+*.pem
+*.pyc
+cache/
+TODO.md
+*.pt
+*.faiss
+*.pkl

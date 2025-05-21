@@ -1,0 +1,242 @@
+__init__.py:
+  NAME: Home
+  ICON: 🏠
+  DESCRIPTION: |
+    Welcome to my superapp, a comprehensive toolset for data science and machine learning 🚀  
+    [![source code](https://img.shields.io/badge/source_code-gray?logo=github)](https://github.com/daltunay/my-superapp/)
+
+    Technologies used:
+    - **Programming language**: Python
+    - **Libraries**: pandas, numpy, scikit-learn, OpenCV, Mediapipe, plotly, XGBoost, SHAP, LangChain, OpenAI, Together, FAISS, ultralytics, umap
+    - **Deployment**: Docker, Streamlit
+
+    Feel free to provide feedback and make this superapp even more powerful!
+
+
+    > _Made by Daniel Altunay_
+    [![LinkedIn URL](https://img.icons8.com/?id=13930&format=png)](https://linkedin.com/in/daltunay)
+    [![GitHub URL](https://img.icons8.com/?id=AZOZNnY73haj&format=png)](https://github.com/daltunay)
+
+    ---
+  SIDEBAR: radio
+  TAG:
+
+statistical_tests:
+  __init__.py:
+    NAME: Statistical Tests
+    ICON: 🔢
+    DESCRIPTION: Perform several statistical tests!
+    SIDEBAR: radio
+    TAG: 📚 Statistics
+
+  ab_test.py:
+    NAME: A/B Test
+    ICON: 🆎
+    DESCRIPTION: |
+      Perform A/B tests!
+      > pandas, numpy, scipy
+    TAG:
+
+  chi2_test.py:
+    NAME: Chi-squared Test
+    ICON: 🆇
+    DESCRIPTION: |
+      Perform chi-squared tests!
+      > pandas, numpy, scipy
+    TAG:
+
+dimensionality_reduction:
+  __init__.py:
+    NAME: Dimensionality Reduction
+    ICON: 🔽
+    DESCRIPTION: Reduce dimensionality for high-D data!
+    SIDEBAR: radio
+    TAG: 📚 Statistics
+
+  pca.py:
+    NAME: PCA
+    ICON: ⭕
+    DESCRIPTION: |
+      Perform Principal Component Analysis!
+      > pandas, scikit-learn, plotly
+    TAG:
+
+  t-sne.py:
+    NAME: t-SNE
+    ICON: 📊
+    DESCRIPTION: |
+      Perform t-distributed Stochastic Neighbor Embedding!
+      > pandas, scikit-learn, plotly
+    TAG:
+
+  umap.py:
+    NAME: UMAP
+    ICON: 🗺️
+    DESCRIPTION: |
+      Perform Uniform Manifold Approximation and Projection!
+      > pandas, scikit-learn, umap, plotly
+    TAG:
+
+landmarks:
+  __init__.py:
+    NAME: Landmarks Detection
+    ICON: 📍
+    DESCRIPTION: Perform live landmark detection using your webcam!
+    SIDEBAR: radio
+    TAG: 👁️ Computer Vision
+
+  face_landmarks.py:
+    NAME: Face Mesh
+    ICON: 👤
+    DESCRIPTION: |
+      Detect face landmarks using Mediapipe!
+      > OpenCV, Mediapipe, WebRTC
+    TAG:
+
+  pose_landmarks.py:
+    NAME: Pose Landmarks
+    ICON: 🤸‍♂️
+    DESCRIPTION: |
+      Detect body pose landmarks using Mediapipe!
+      > OpenCV, Mediapipe, WebRTC
+    TAG:
+
+object_detection:
+  __init__.py:
+    NAME: Object Detection
+    ICON: 🔍
+    DESCRIPTION: Perform live object detection using your webcam!
+    SIDEBAR: radio
+    TAG: 👁️ Computer Vision
+
+  face_detection.py:
+    NAME: Face Detection
+    ICON: 👀
+    DESCRIPTION: |
+      Detect one or several faces using Mediapipe!
+      > OpenCV, Mediapipe, WebRTC
+    TAG:
+
+  multi_objects.py:
+    NAME: Multi-Object Detection
+    ICON: 📦
+    DESCRIPTION: |
+      Detect 80 unique labels using YOLOv8!
+      > OpenCV, ultralytics, WebRTC
+    TAG:
+
+image_generation:
+  __init__.py:
+    NAME: Image Generation
+    ICON: 🎨
+    DESCRIPTION: Generate pictures with AI!
+    SIDEBAR: radio
+    TAG: 🧠 Generative AI
+
+  dall_e.py:
+    NAME: DALL·E
+    ICON: 🖼️
+    DESCRIPTION: DALL·E model from OpenAI
+    TAG:
+
+  stable_diffusion.py:
+    NAME: Stable Diffusion
+    ICON: 🖼️
+    DESCRIPTION: Stable Diffusion model from Stability AI
+    TAG:
+
+large_language_models:
+  __init__.py:
+    NAME: Large Language Models
+    ICON: 💬
+    DESCRIPTION: Interact with large language models!
+    SIDEBAR: radio
+    TAG: 🧠 Generative AI
+
+  chatbot.py:
+    NAME: Basic Chatbot
+    ICON: 👋
+    DESCRIPTION: |
+      A regular chatbot.
+      > LangChain, OpenAI, Together
+    TAG: 🤖 Chatbots
+
+  chatbot_rag.py:
+    NAME: Chatbot with RAG
+    ICON: 📄
+    DESCRIPTION: |
+      A chatbot with RAG (retrieval augmented generation).
+      > LangChain, OpenAI, Together, FAISS
+    TAG: 🤖 Chatbots
+
+  chatbot_tools.py:
+    NAME: Chatbot with Tools
+    ICON: 🛠️
+    DESCRIPTION: |
+      A chatbot augmented with tools (web access, code interpreter, etc.)
+      > LangChain (Agents), OpenAI, Together
+    TAG: 🤖 Chatbots
+
+  chatbot_web_summary.py:
+    NAME: Webpage summary
+    ICON: 🌐
+    DESCRIPTION: |
+      A model to synthetize to text content of a webpage.
+      > LangChain, OpenAI, Together, unstructured
+    TAG: 🔄 Other
+
+classification:
+  __init__.py:
+    NAME: Classification
+    ICON: 🎯
+    DESCRIPTION: Perform several types of classification!
+    SIDEBAR: radio
+    TAG: ⚙️ Machine Learning
+
+  xgboost.py:
+    NAME: Gradient Boosting
+    ICON: 🌲
+    DESCRIPTION: |
+      Use gradient boosting for binary & multi-class classification!
+      > pandas, XGBoost, scikit-learn, SHAP, plotly
+    TAG:
+
+regression:
+  __init__.py:
+    NAME: Regression
+    ICON: 📈
+    DESCRIPTION: Perform several types of regression!
+    SIDEBAR: radio
+    TAG: ⚙️ Machine Learning
+
+  xgboost.py:
+    NAME: Gradient Boosting
+    ICON: 🌲
+    DESCRIPTION: |
+      Use gradient boosting for regression!
+      > pandas, XGBoost, scikit-learn, SHAP, plotly
+    TAG:
+
+clustering:
+  __init__.py:
+    NAME: Clustering
+    ICON: 🕸️
+    DESCRIPTION: Perform different types of clustering!
+    SIDEBAR: radio
+    TAG: ⚙️ Machine Learning
+
+  kmeans.py:
+    NAME: K-Means
+    ICON: 🇰
+    DESCRIPTION: |
+      Perform a K-Means clustering!
+      > pandas, scikit-learn, plotly
+    TAG:
+
+  dbscan.py:
+    NAME: DBSCAN
+    ICON: 🇩
+    DESCRIPTION: |
+      Perform a DBSCAN clustering!
+      > pandas, scikit-learn, plotly
+    TAG:
